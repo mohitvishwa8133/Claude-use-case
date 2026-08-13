@@ -20,6 +20,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The cheap gate, and it runs first on purpose.
+      #
+      # A typo is a deterministic defect: the same character is wrong on every
+      # run, and a parser finds it in milliseconds for free. Asking the model to
+      # find it instead buys uncertainty at the price of an API call — three
+      # runs, three answers. Judgement is what the model is for; parsing is not.
+      #
+      # This site has no build step (CLAUDE.md says so), so without this step
+      # nothing at all parses the script before a browser does. Failing here
+      # means the review below never runs and no credit is spent on broken code.
+      #
+      # Scope, stated so it is not mistaken for more than it is: --check parses,
+      # it does not resolve names. `functoin f() {}` and an unclosed brace fail
+      # here; `documnet.getElementById(...)` is valid JavaScript and passes.
+      # Catching that needs ESLint's no-undef, and `getElementByID` — a real
+      # method name misspelt on a real object — needs types or a running page.
+      - name: Check JavaScript syntax
+        run: node --check site/scripts.js
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
