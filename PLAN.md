@@ -294,18 +294,72 @@ What to say out loud when demoing this, per domain.
 
 ## 7. Not built (deliberate)
 
-Listed so the omissions are choices rather than gaps.
+This repo commits to the PR-only flow as the whole of Scenario 2. Several
+topics from the broader Scenario 2 discussion are therefore **not artifacts
+here**. Some are covered in narration; some are simply absent. Listed so the
+omissions read as choices rather than gaps — and so nobody demoing this claims
+coverage the repo does not have.
 
-- **`/review-feature` command and `feature-review` skill.** Two files. Worth
-  adding only if the command-vs-skill distinction needs to be *shown* rather
-  than described.
-- **MCP refactor server.** The vague-vs-detailed tool-description demo. Out of
-  scope for a read-only reviewer that never refactors anything.
-- **Scratchpad handoff (`feature_findings.md`).** The D5 context-handoff
-  extension. The fresh-session-per-PR point stands without it.
-- **A test suite for the site.** There is no JavaScript worth unit-testing yet.
-  When there is, the workflow should run it *before* the review — a review of
-  code that fails its own tests wastes a model call and buries the signal.
+### MCP refactor server
+
+No custom MCP server, no `extract_function` / `rename_symbol`, and no
+vague-vs-detailed tool-description experiment. The tool story stops at built-in
+tools and their gating. Out of scope for a read-only reviewer that never
+refactors anything.
+
+### Skills vs commands
+
+No `/review-feature` command file and no `feature-review` `SKILL.md` with
+trigger or description variants. The distinction — command is user-invoked,
+skill is model-invoked — is **explained in words only**, not demonstrated by
+working artifacts. Two files if it ever needs to be shown rather than said.
+
+### Scratchpad / context handoff
+
+No `feature_findings.md` or equivalent passing context between sessions. The
+D5 "fresh session per PR" point is made without any explicit handoff
+mechanism, which is honest: fresh sessions are the claim, and a scratchpad
+would be the *other* half of D5 rather than support for this half.
+
+### Local interactive demo flow
+
+No separate demo script and no guided walkthrough. `--mode local` is a real
+configuration, but there is no class-demo flow beyond running the CLI by hand.
+
+### Extended thinking and multi-aspect review probes
+
+No experiments comparing zero-shot vs chain-of-thought vs extended-thinking
+prompts, and none splitting a single multi-aspect review into separate
+security and business-logic passes. Discussed in the wider Scenario 2 notes;
+not realized as probes here.
+
+### Plan mode vs direct execution
+
+No paired tasks showing a simple fix by direct execution against a complex
+refactor via plan mode. Narratable, but there is no probe in this repo.
+
+### A test suite for the site
+
+No JavaScript or HTML tests, and the workflow runs the review directly rather
+than gating on tests first. When there is something worth testing, the tests
+should run *before* the review — a review of code that fails its own tests
+wastes a model call and buries the real signal under noise.
+
+### What this means for coverage
+
+Section 6 says what each domain *is* covered by. This is the other side of it.
+
+| Domain | Covered by | Not covered |
+|---|---|---|
+| **D3** Config & Workflows | `CLAUDE.md`, `setting_sources`, injected standards, `permissions.deny`, lean CI config, tool gating | skills and commands as working artifacts |
+| **D5** Context & Reliability | fresh session per PR, repeatable configuration | scratchpad handoff (conceptual only) |
+| **D2** Tool Design | built-in tools, read-only gating | MCP servers, tool-description quality |
+| **D4** Prompt Engineering | REPORT / SKIP, scoped verification, structured JSON | extended thinking, multi-aspect prompt splitting |
+| **D1** Agentic Architecture | autonomous CI review | conversational-vs-autonomous beyond the local/CI modes |
+
+Every one of these can be layered on later without touching the core PR flow.
+That is the point of keeping `--mode` a configuration bundle rather than a
+branch in the code.
 
 ---
 
