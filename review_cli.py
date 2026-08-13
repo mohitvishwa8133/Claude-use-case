@@ -13,7 +13,7 @@ CI run. It is not a second code path: it selects a bundle of configuration
 Exit codes — CI depends on these being distinct:
 
     0  clean, or only non-blocking findings
-    1  blocking findings (security/logic at high or critical) -> block the merge
+    1  blocking findings (security/logic/typo at high or critical) -> block the merge
     2  the reviewer itself failed (API error, bad config) -> not a verdict
 """
 
@@ -93,7 +93,7 @@ FINDINGS_SCHEMA: dict[str, Any] = {
                     "line": {"type": "integer"},
                     "category": {
                         "type": "string",
-                        "enum": ["security", "logic", "ux", "reliability"],
+                        "enum": ["security", "logic", "typo", "ux", "reliability"],
                     },
                     "severity": {
                         "type": "string",
@@ -110,7 +110,13 @@ FINDINGS_SCHEMA: dict[str, Any] = {
 
 # The merge gate. Both halves must hold: a `ux` finding at `critical` is loud,
 # but it is not a reason to refuse a merge automatically.
-BLOCKING_CATEGORIES = {"security", "logic"}
+#
+# `typo` is in the blocking set because a name the browser cannot resolve is
+# not a spelling preference — `documnet.getElementById(...)` throws, and
+# `getElementById('welcome-bannner')` silently returns null and takes the next
+# line down with it. Severity still has to hold, which is what keeps a
+# misspelt word in visible copy (graded `low`) out of the gate.
+BLOCKING_CATEGORIES = {"security", "logic", "typo"}
 BLOCKING_SEVERITIES = {"high", "critical"}
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -250,7 +256,7 @@ def build_prompt(cfg: ReviewConfig) -> str:
             "Report what you find. Do not modify any files.",
             "",
             "Return every finding with its file, line, category "
-            "(security | logic | ux | reliability), severity "
+            "(security | logic | typo | ux | reliability), severity "
             "(low | medium | high | critical) and a one-sentence summary.",
         ]
     )

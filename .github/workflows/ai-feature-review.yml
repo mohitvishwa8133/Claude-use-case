@@ -20,23 +20,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The cheap gate, and it runs first on purpose.
+      # The cheap gate. A syntax error is a deterministic defect: the same
+      # character is wrong on every run, and a parser finds it in milliseconds
+      # for free. This site has no build step (CLAUDE.md says so), so without
+      # this nothing parses the script before a browser does.
       #
-      # A typo is a deterministic defect: the same character is wrong on every
-      # run, and a parser finds it in milliseconds for free. Asking the model to
-      # find it instead buys uncertainty at the price of an API call — three
-      # runs, three answers. Judgement is what the model is for; parsing is not.
-      #
-      # This site has no build step (CLAUDE.md says so), so without this step
-      # nothing at all parses the script before a browser does. Failing here
-      # means the review below never runs and no credit is spent on broken code.
+      # continue-on-error, even though this IS a gate: the review below reviews
+      # the same file, and stopping here would mean never seeing what it made of
+      # it. Both outcomes are enforced together in the last step, so nothing is
+      # let through — the failure is just deferred, not forgiven. Running both
+      # is also the point worth showing: the parser answers in a second for
+      # nothing and gives the same answer every time; the model takes a minute,
+      # costs money, and reasons about things a parser cannot see.
       #
       # Scope, stated so it is not mistaken for more than it is: --check parses,
       # it does not resolve names. `functoin f() {}` and an unclosed brace fail
-      # here; `documnet.getElementById(...)` is valid JavaScript and passes.
-      # Catching that needs ESLint's no-undef, and `getElementByID` — a real
-      # method name misspelt on a real object — needs types or a running page.
+      # here; `documnet.getElementById(...)` is valid JavaScript and passes. The
+      # review's `typo` category is what covers the rest.
       - name: Check JavaScript syntax
+        id: syntax
+        continue-on-error: true
         run: node --check site/scripts.js
 
       - uses: actions/setup-python@v5
@@ -148,8 +151,17 @@ jobs:
       # The merge gate. Exit codes are distinct on purpose:
       #   0 = clean          1 = blocking findings          2 = reviewer failed
       # Collapsing 1 and 2 is how teams learn to ignore a red pipeline.
+      #
+      # Either gate failing blocks the merge, and the log says which — a red
+      # check that does not name its own cause sends people hunting through
+      # job output for it.
       - name: Enforce review outcome
-        if: steps.review.outcome == 'failure'
+        if: steps.syntax.outcome == 'failure' || steps.review.outcome == 'failure'
         run: |
-          echo "AI Feature Review did not pass. See the PR comment above."
+          if [ "${{ steps.syntax.outcome }}" = "failure" ]; then
+            echo "site/scripts.js does not parse. See the 'Check JavaScript syntax' step."
+          fi
+          if [ "${{ steps.review.outcome }}" = "failure" ]; then
+            echo "AI Feature Review did not pass. See the PR comment above."
+          fi
           exit 1
