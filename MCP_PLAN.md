@@ -126,10 +126,10 @@ key.)
 
 ---
 
-## 4. Two bugs this surfaced
+## 4. Three bugs this surfaced
 
-Both were caught by running the tools directly before wiring a model to them,
-and both would have quietly ruined the comparison.
+All three were caught by running the tools directly before wiring a model to
+them, and each would have quietly ruined the comparison.
 
 ### Parameters picked up out of string literals
 
@@ -173,15 +173,41 @@ back to `Edit` — which would have shown up as "no difference" and been read as
 
 ---
 
+### The rename matched inside hyphenated names
+
+The detailed description promises:
+
+> PREFER THIS OVER Grep-then-Edit: a manual sweep matches substrings, so
+> renaming `nav` also corrupts `nav-toggle` and `site-nav`. This does not.
+
+It did. `nav` matches inside `nav-toggle`, because a hyphen counts as a
+word boundary — so the tool had exactly the flaw it was selling itself as the
+cure for. CSS class names are full of hyphens, which is the case the
+description leads with.
+
+Fixed by treating `-` as part of a name: `(?<![\w-])name(?![\w-])`. The
+difference is visible in the counts — renaming `status` used to report 4 hits
+in `site/scripts.js` and 2 in `site/index.html`; the extras were inside
+`newsletter-status`. It now reports 3 and 1.
+
+This one is the sharpest of the three. A tool whose description makes a promise
+its code does not keep is worse than a vague description, because the agent
+learns to distrust it after one bad result — and that distrust would show up in
+the comparison as "the wording didn't matter".
+
+---
+
 ## 5. What is and isn't verified
 
 **Working:**
 
 - Both tools, run directly against the real `site/scripts.js`. `rename_symbol`
-  correctly reports `site/scripts.js (4)`, `site/styles.css (1)`,
-  `site/index.html (2)` for `status`. `extract_function` correctly works out `(email, status, subscribe)`.
+  correctly reports `site/scripts.js (3)`, `site/styles.css (1)`,
+  `site/index.html (1)` for `status`, and correctly skips `site-nav` and
+  `nav-toggle` when renaming `nav`. `extract_function` correctly works out `(email, status, subscribe)`.
 - The refusal paths: non-JavaScript file, line numbers out of range, unbalanced
-  block, nothing to rename — each returns a clear error rather than nonsense.
+  block, a path outside `site/`, nothing to rename — each returns a clear error
+  rather than nonsense.
 - The MCP server connects in a live session:
   ```
   mcp_servers: [{'name': 'refactor', 'status': 'connected'}]
