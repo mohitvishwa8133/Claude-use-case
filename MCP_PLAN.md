@@ -63,7 +63,7 @@ diff, and never write to disk:
 | Tool | What it does |
 |---|---|
 | `extract_function(file, start_line, end_line, new_name)` | Pulls a block of JavaScript into a new top-level function, works out the parameter list from the variables the block uses but does not define, returns a diff. |
-| `rename_symbol(old_name, new_name)` | Whole-word rename across every `.js`, `.css` and `.html` file; returns the affected files with a count each. |
+| `rename_symbol(old_name, new_name)` | Whole-name rename across every `.js`, `.css` and `.html` file under `site/`; returns the affected files with a count each. |
 
 Advisory on purpose. The agent still has `Edit`, so what is being compared is
 *choice*, not capability — and neither run can damage the other's copy through
@@ -89,7 +89,7 @@ could add servers and the two runs would stop being comparable.
 ### The job
 
 ```
-Two changes to `scripts.js`:
+Two changes to `site/scripts.js`:
 
 1. The newsletter submit handler validates the email inline. Pull that
    validation out into its own top-level function called `isValidEmail`.
@@ -101,7 +101,7 @@ Show me the resulting change.
 It needs both tools, and both are things `Edit` could also do. That is what
 makes the choice worth watching rather than forced.
 
-The job needs `scripts.js`, which exists only on the `test` branch.
+The job needs `site/scripts.js`, which exists only on the `test` branch.
 `compare_tools.py` checks for it and says so rather than failing obscurely.
 
 ### What gets measured
@@ -161,7 +161,7 @@ and hand back JavaScript that cannot run. It now refuses a range whose braces
 or brackets do not close inside it:
 
 ```
-Lines 26-31 of scripts.js cannot be extracted: the block closes a brace it
+Lines 26-31 of site/scripts.js cannot be extracted: the block closes a brace it
 never opened. Widen or narrow the range to a complete statement.
 ```
 
@@ -177,9 +177,9 @@ back to `Edit` — which would have shown up as "no difference" and been read as
 
 **Working:**
 
-- Both tools, run directly against the real `scripts.js`. `rename_symbol`
-  correctly reports `scripts.js (4)`, `styles.css (1)`, `index.html (2)` for
-  `status`. `extract_function` correctly works out `(email, status, subscribe)`.
+- Both tools, run directly against the real `site/scripts.js`. `rename_symbol`
+  correctly reports `site/scripts.js (4)`, `site/styles.css (1)`,
+  `site/index.html (2)` for `status`. `extract_function` correctly works out `(email, status, subscribe)`.
 - The refusal paths: non-JavaScript file, line numbers out of range, unbalanced
   block, nothing to rename — each returns a clear error rather than nonsense.
 - The MCP server connects in a live session:

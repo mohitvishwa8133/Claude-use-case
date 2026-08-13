@@ -18,7 +18,7 @@ test  --(PR)-->  main
 
 | Path | What it is |
 |---|---|
-| `index.html`, `styles.css` | the landing page |
+| `site/` | the website — `index.html`, `styles.css`, `scripts.js` |
 | `PLAN.md` | the build record: design, deviations, what is and isn't verified |
 | `MCP_PLAN.md` | comparing MCP tool descriptions — separate from the PR flow |
 | `CLAUDE.md` | the review standards: REPORT / SKIP / scope / severity |

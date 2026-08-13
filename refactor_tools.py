@@ -62,7 +62,7 @@ DESCRIPTIONS_DETAILED = {
         "variable the way a hand-written edit can.\n"
         "\n"
         "PARAMETERS:\n"
-        "  file        repo-relative path, e.g. 'scripts.js'\n"
+        "  file        repo-relative path, e.g. 'site/scripts.js'\n"
         "  start_line  first line of the block to extract (1-indexed, inclusive)\n"
         "  end_line    last line of the block (1-indexed, inclusive)\n"
         "  new_name    name for the extracted function, camelCase\n"
@@ -73,9 +73,10 @@ DESCRIPTIONS_DETAILED = {
     ),
     "rename_symbol": (
         "Rename an identifier — a JavaScript function or variable, or a CSS class — "
-        "across every .js, .css and .html file in the repository. Matches whole "
-        "identifiers only, so substrings of longer names are left alone. Returns the "
-        "affected files with a per-file match count. Does not write to disk.\n"
+        "across every .js, .css and .html file under site/. Matches whole identifiers "
+        "only, treating a hyphen as part of a name, so longer names that contain the "
+        "one being renamed are left alone. Returns the affected files with a per-file "
+        "match count. Does not write to disk.\n"
         "\n"
         "USE THIS WHEN: asked to rename, re-label, or consistently re-spell something "
         "that appears in more than one file; when a CSS class and the markup that "

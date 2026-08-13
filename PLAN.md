@@ -35,9 +35,10 @@ would run before opening the PR — it is not a second product.
 
 ```
 PR-Scenario/
-├─ index.html                        the landing page
-├─ styles.css
-├─ scripts.js                        (test branch only)
+├─ site/                             THE WEBSITE — all of it, nothing else
+│  ├─ index.html
+│  ├─ styles.css
+│  └─ scripts.js                     (test branch only)
 ├─ CLAUDE.md                         review standards: REPORT / SKIP / scope / severity
 ├─ PLAN.md                           this file
 ├─ MCP_PLAN.md                       comparing MCP tool descriptions
@@ -59,8 +60,8 @@ PR-Scenario/
 
 | Branch | Contents |
 |---|---|
-| `main` | plain landing page + the full review apparatus. The baseline. |
-| `test` | enhanced page: featured post, newsletter, mobile menu, `scripts.js`. Carries the planted defects. |
+| `main` | plain landing page in `site/` + the full review apparatus. The baseline. |
+| `test` | enhanced page: featured post, newsletter, mobile menu, `site/scripts.js`. Carries the planted defects. |
 
 `test` is one commit ahead of `main`. Everything under `.claude/`, `.github/`
 and `review_cli.py` is identical on both, so the reviewer that judges the PR is
