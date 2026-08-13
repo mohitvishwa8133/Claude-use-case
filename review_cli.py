@@ -33,14 +33,16 @@ from typing import Any
 REPO = Path(__file__).resolve().parent
 
 # Load the API key BEFORE importing the SDK. load_dotenv does not overwrite an
-# already-set variable, so a real environment variable (what CI provides) wins.
+# already-set variable, so a real environment variable wins — which is how CI
+# supplies it, from the ANTHROPIC_API_KEY repository secret.
 #
-# The repo's own .env is deliberately NOT loaded: it holds fake values and is
-# the fixture the deny-rule demo reads from.
+# `.env.local` is gitignored and is where a developer's own key goes. The
+# committed `.env` is deliberately NOT loaded: it holds fake values and exists
+# only as the fixture the deny rule blocks.
 try:
     from dotenv import load_dotenv
 
-    load_dotenv(REPO.parent / ".env")
+    load_dotenv(REPO / ".env.local")
 except ImportError:  # pragma: no cover — only when the extra is not installed
     pass
 
@@ -351,10 +353,19 @@ async def run_review(cfg: ReviewConfig) -> ReviewRun:
     run = ReviewRun(config=cfg)
     pending: dict[str, ToolEvent] = {}
     started = time.perf_counter()
+    # The transport raises with the ResultMessage subtype, which for a billing
+    # or auth failure is the word "success" — useless in a CI log. The real
+    # reason arrives one message earlier, on the assistant turn. Keep it.
+    reason: str | None = None
 
     try:
         async for message in query(prompt=build_prompt(cfg), options=build_options(cfg)):
             if isinstance(message, AssistantMessage):
+                if getattr(message, "error", None):
+                    detail = " ".join(
+                        b.text for b in message.content if isinstance(b, TextBlock)
+                    ).strip()
+                    reason = f"{message.error}: {detail}" if detail else str(message.error)
                 for block in message.content:
                     if isinstance(block, ToolUseBlock):
                         event = ToolEvent(
@@ -395,7 +406,7 @@ async def run_review(cfg: ReviewConfig) -> ReviewRun:
                 run.findings = _extract_findings(message)
                 if message.is_error:
                     run.is_error = True
-                    run.error = str(message.subtype)
+                    run.error = reason or str(message.subtype)
                 # Source 2 of 2 for denials.
                 for denial in message.permission_denials or []:
                     if not isinstance(denial, dict):
@@ -417,7 +428,7 @@ async def run_review(cfg: ReviewConfig) -> ReviewRun:
 
     except Exception as exc:  # noqa: BLE001 — surfaced as exit code 2, never swallowed
         run.is_error = True
-        run.error = f"{type(exc).__name__}: {exc}"
+        run.error = reason or f"{type(exc).__name__}: {exc}"
 
     run.wall_clock_s = time.perf_counter() - started
     return run
