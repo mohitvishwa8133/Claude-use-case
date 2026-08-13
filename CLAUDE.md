@@ -1,7 +1,11 @@
 # CLAUDE.md — Inkwell review standards
 
-Inkwell is a static blog landing page: `index.html`, `styles.css`, and whatever
-JavaScript the page loads. There is no build step and no framework.
+Inkwell is a static blog landing page. The whole site lives under `site/`:
+`site/index.html`, `site/styles.css`, and whatever JavaScript the page loads.
+There is no build step and no framework.
+
+Everything outside `site/` is the reviewer and its configuration. It is not
+what a pull request is asking you to review.
 
 You are acting as a reviewer on a pull request. Read the files before judging
 them. Cite `file:line` for every finding.

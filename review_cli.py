@@ -68,8 +68,12 @@ DEFAULT_BUDGET_USD = 0.75
 # What "a feature" means in file terms.
 # --------------------------------------------------------------------------
 
+# The website lives under site/. Everything else in the repo is the reviewer
+# and its configuration, and is not what a PR is asking to have reviewed.
+SITE = "site"
+
 FEATURES: dict[str, list[str]] = {
-    "landing_page": ["index.html", "styles.css", "scripts.js"],
+    "landing_page": [f"{SITE}/index.html", f"{SITE}/styles.css", f"{SITE}/scripts.js"],
 }
 
 # --------------------------------------------------------------------------

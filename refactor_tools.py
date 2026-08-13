@@ -21,10 +21,16 @@ from typing import Any
 
 from claude_agent_sdk import create_sdk_mcp_server, tool
 
-REPO = Path(__file__).resolve().parent
+# Repo root. `compare_tools.py` repoints this at a throwaway copy for the
+# duration of a run, so the tools and `Edit` are looking at the same files.
+ROOT = Path(__file__).resolve().parent
 
-# Files these tools understand. This repo is a static site, so "refactoring"
-# means JavaScript functions and identifiers shared across markup and styles.
+# The website lives here. These tools only ever touch it — the reviewer, its
+# configuration and the docs are not refactoring targets.
+SITE = "site"
+
+# Files these tools understand. This is a static site, so "refactoring" means
+# JavaScript functions and names shared across markup and styles.
 SOURCE_GLOBS = ("*.js", "*.css", "*.html")
 
 # --------------------------------------------------------------------------
@@ -62,7 +68,7 @@ DESCRIPTIONS_DETAILED = {
         "  new_name    name for the extracted function, camelCase\n"
         "\n"
         "EXAMPLE: to pull the email validation out of the submit handler at lines "
-        "24-31, call with file='scripts.js', start_line=24, end_line=31, "
+        "24-31, call with file='site/scripts.js', start_line=24, end_line=31, "
         "new_name='isValidEmail'."
     ),
     "rename_symbol": (
@@ -126,10 +132,11 @@ def _err(text: str) -> dict[str, Any]:
 
 
 def _resolve(rel: str) -> Path:
-    """Resolve inside the repo. A path that escapes it is a bug, not a feature."""
-    path = (REPO / rel).resolve()
-    if REPO not in path.parents and path != REPO:
-        raise ValueError(f"path escapes the repository: {rel}")
+    """Resolve inside site/. A path that escapes it is a bug, not a feature."""
+    site = (ROOT / SITE).resolve()
+    path = (ROOT / rel).resolve()
+    if site not in path.parents:
+        raise ValueError(f"{rel} is outside {SITE}/, which is the only place these tools work")
     return path
 
 
@@ -220,14 +227,18 @@ def _extract_function_impl(args: dict[str, Any]) -> dict[str, Any]:
 
 def _rename_symbol_impl(args: dict[str, Any]) -> dict[str, Any]:
     old_name, new_name = args["old_name"], args["new_name"]
-    pattern = re.compile(rf"\b{re.escape(old_name)}\b")
+    # NOT `\b...\b`. A hyphen is a word boundary, so `\bnav\b` matches inside
+    # `nav-toggle` and `site-nav` — which is exactly the failure this tool
+    # promises to avoid, and CSS class names are full of hyphens. Treating `-`
+    # as part of an identifier is what makes the promise true.
+    pattern = re.compile(rf"(?<![\w-]){re.escape(old_name)}(?![\w-])")
 
     changed: list[str] = []
     for glob in SOURCE_GLOBS:
-        for path in sorted(REPO.glob(glob)):
+        for path in sorted((ROOT / SITE).glob(glob)):
             hits = len(pattern.findall(path.read_text(encoding="utf-8")))
             if hits:
-                changed.append(f"{path.relative_to(REPO).as_posix()} ({hits})")
+                changed.append(f"{path.relative_to(ROOT).as_posix()} ({hits})")
 
     if not changed:
         return _ok(f"No whole-identifier match for `{old_name}`. Nothing to rename.")

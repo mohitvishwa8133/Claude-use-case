@@ -63,7 +63,7 @@ DEFAULT_MODEL = os.environ.get("REVIEW_MODEL", "haiku")
 # The job. It needs both tools, and both are things `Edit` could also do —
 # that is what makes the choice worth watching rather than forced.
 JOB = (
-    "Two changes to `scripts.js`:\n"
+    "Two changes to `site/scripts.js`:\n"
     "\n"
     "1. The newsletter submit handler validates the email inline. Pull that "
     "validation out into its own top-level function called `isValidEmail`.\n"
@@ -72,8 +72,10 @@ JOB = (
     "Show me the resulting change."
 )
 
-# What gets copied into each run's scratch folder. Not `.git`, not `.venv`.
-COPIED_FILES = ("index.html", "styles.css", "scripts.js", "CLAUDE.md")
+# Copied into each run's scratch folder, keeping the site/ layout so paths in
+# the job, the tool arguments and `Edit` all mean the same thing.
+SITE = "site"
+COPIED_FILES = ("CLAUDE.md",)
 
 MCP_TOOLS = ["mcp__refactor__extract_function", "mcp__refactor__rename_symbol"]
 BUILTIN_TOOLS = ["Read", "Grep", "Glob", "Edit"]
@@ -123,9 +125,10 @@ def build_options(descriptions: str, cwd: Path) -> ClaudeAgentOptions:
 
 
 def _make_scratch_copy(name: str, parent: Path) -> Path:
-    """A throwaway copy of the source files, one per run."""
+    """A throwaway copy of the website, one per run."""
     folder = parent / name
     folder.mkdir(parents=True)
+    shutil.copytree(REPO / SITE, folder / SITE)
     for filename in COPIED_FILES:
         source = REPO / filename
         if source.exists():
@@ -137,8 +140,8 @@ async def run_once(descriptions: str, folder: Path) -> RunResult:
     result = RunResult(descriptions=descriptions)
     # The MCP tools read from disk, so point them at this run's copy too.
     # Otherwise they would report on the real files while `Edit` rewrote a copy.
-    previous_root = refactor_tools.REPO
-    refactor_tools.REPO = folder
+    previous_root = refactor_tools.ROOT
+    refactor_tools.ROOT = folder
     started = time.perf_counter()
     reason: str | None = None
 
@@ -163,7 +166,7 @@ async def run_once(descriptions: str, folder: Path) -> RunResult:
     except Exception as exc:  # noqa: BLE001
         result.error = reason or f"{type(exc).__name__}: {exc}"
     finally:
-        refactor_tools.REPO = previous_root
+        refactor_tools.ROOT = previous_root
 
     result.wall_clock_s = time.perf_counter() - started
     return result
@@ -221,9 +224,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="print the settings and the job, then exit without calling the API")
     args = parser.parse_args(argv)
 
-    if not (REPO / "scripts.js").exists():
+    if not (REPO / SITE / "scripts.js").exists():
         print(
-            "scripts.js not found.\n"
+            f"{SITE}/scripts.js not found.\n"
             "This rewrites the landing page's JavaScript, which only exists on the\n"
             "`test` branch. Run `git checkout test` first.",
             file=sys.stderr,
