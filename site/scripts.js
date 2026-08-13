@@ -4,8 +4,10 @@
 var params = new URLSearchParams(window.location.search);
 var welcome = params.get('welcome');
 if (welcome) {
-  document.getElementById('welcome-banner').innerHTML =
-    'Welcome back, <strong>' + welcome + '</strong>!';
+  // textContent, not innerHTML: the value comes from the URL, so anything
+  // that renders it as markup is an XSS sink.
+  document.getElementById('welcome-banner').textContent =
+    'Welcome back, ' + welcome + '!';
 }
 
 // Mobile menu.
@@ -22,7 +24,7 @@ form.addEventListener('submit', function (event) {
   event.preventDefault();
   var email = document.getElementById('newsletter-email').value;
 
-  if (email.indexOf('@') === -1) {
+  if (email.indexOf('@') !== -1) {
     status.textContent = 'Thanks! Check your inbox to confirm.';
     subscribe(email);
   } else {
@@ -41,3 +43,7 @@ function subscribe(email) {
 function trackClick(label) {
   console.log('clicked', label);
 }
+
+// Show how many posts are listed, under the "Recent posts" heading.
+var cards = document.querySelectorAll('.post-card');
+document.getElementById('post-count').textContent = cards.length + ' posts';
