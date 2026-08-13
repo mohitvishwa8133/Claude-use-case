@@ -1,0 +1,96 @@
+/* Inkwell — minimal styling for the landing page.
+   Deliberately plain. The `test` branch is where this grows. */
+
+:root {
+  --ink: #1c1c1c;
+  --paper: #fdfcf9;
+  --muted: #5a5a5a;
+  --rule: #e2ded4;
+  --accent: #7a4b2a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.6 Georgia, "Iowan Old Style", serif;
+}
+
+main { max-width: 44rem; margin: 0 auto; padding: 0 1.25rem; }
+
+/* header */
+
+.site-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.site-header nav a {
+  margin-left: 1rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-header nav a:hover { color: var(--accent); }
+
+/* hero */
+
+.hero { padding: 3rem 0 2rem; }
+
+.hero h1 {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.hero p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+/* posts */
+
+.posts h2, .about h2 {
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+}
+
+.post-card { padding: 1.25rem 0; border-bottom: 1px solid var(--rule); }
+
+.post-card h3 { margin: 0 0 0.35rem; font-size: 1.25rem; }
+
+.post-card p { margin: 0 0 0.5rem; color: var(--muted); }
+
+.post-card a { color: var(--accent); }
+
+/* about + footer */
+
+.about { padding: 2rem 0; }
+
+.site-footer {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
