@@ -1,52 +1,52 @@
-# MCP_PLAN.md — the D2 tool-description probe
+# MCP_PLAN.md — comparing tool descriptions
 
 Companion to `PLAN.md`. Covers the one piece that is not part of the PR flow:
-an in-process MCP refactor server, and the experiment it exists to run.
+an in-process MCP refactor server, and the comparison it exists to run.
 
 ---
 
-## 1. The claim under test
+## 1. The question
 
-**Tool descriptions drive tool selection.**
+**Does the wording of a tool description change which tool the agent picks?**
 
-An agent picks a tool from its description, not its name. Two tools with
-identical names, schemas and implementations will be chosen at different rates
-if one description says what the tool is for and the other does not.
+An agent chooses a tool from its description, not its name. Two tools with the
+same name, the same inputs and the same implementation should get picked at
+different rates if one description says what the tool is for and the other
+does not.
 
-The probe runs the same refactoring task twice against the same code, with the
-same tools available, changing exactly one thing: the prose in the `@tool`
-description.
+So: run the same refactoring job twice, against the same code, with the same
+tools available, changing exactly one thing — the wording.
 
-| Arm | `extract_function` description |
+| Run | `extract_function` description |
 |---|---|
-| `vague` | `"Extracts a function from code."` — 30 chars |
-| `detailed` | what it does, when to use it, when **not** to, why to prefer it over `Edit`, the parameters, a worked example — 1267 chars |
+| `vague` | `"Extracts a function from code."` — 30 characters |
+| `detailed` | what it does, when to use it, when **not** to, why to prefer it over `Edit`, the parameters, a worked example — 1267 characters |
 
-Everything else is byte-identical: same JSON schemas, same Python
-implementations, same built-in tool set, same model, same task.
+Everything else is identical: same input schemas, same Python code behind them,
+same built-in tools, same model, same job.
 
 ---
 
-## 2. Why this is a separate entry point
+## 2. Why this is separate from the PR review
 
-The first design put `--with-mcp vague|detailed` on `review_cli.py`. That does
-not work, and the reason is worth keeping.
+The first idea was a `--with-mcp vague|detailed` flag on `review_cli.py`. That
+does not work, and the reason is worth keeping.
 
 **The reviewer is read-only.** It runs `tools=["Read", "Grep", "Glob"]` in both
 modes and reviews a static landing page. It has no reason to extract a function
-or rename a symbol, so it would never call the refactor tools *in either arm*.
-Both arms would record zero MCP calls, the probe would report "no difference",
-and that null result would be an artifact of the harness rather than a fact
-about descriptions. A probe that cannot fail is not a probe.
+or rename anything, so it would never call the refactor tools *in either run*.
+Both would come back with zero calls, the output would say "no difference", and
+that would be a fact about the setup rather than about descriptions. Something
+that cannot come out either way is not worth running.
 
-So the MCP server lives in `probe_cli.py`, which:
+So the MCP server is driven by `compare_tools.py`, which:
 
 - gives the agent `Edit` as well, so ignoring the MCP tools is a real option;
-- poses a task that genuinely needs refactoring;
+- gives it a job that genuinely needs refactoring;
 - leaves `review_cli.py` and the PR workflow **completely untouched**.
 
-The read-only reviewer is a D3 claim this repo makes elsewhere. Weakening it to
-host a D2 demo would have cost more than the demo is worth.
+The read-only reviewer is a claim this repo makes elsewhere. Weakening it to
+host this comparison would cost more than the comparison is worth.
 
 ---
 
@@ -55,38 +55,38 @@ host a D2 demo would have cost more than the demo is worth.
 ### `refactor_tools.py`
 
 An in-process MCP server (`create_sdk_mcp_server`), so there is no second
-process to manage and the description set is a Python variable swapped per arm.
+process to manage and the wording is just a Python variable.
 
-Two tools, both **advisory** — they compute the change and return it as a
+Two tools, both **advisory** — they work out the change and return it as a
 diff, and never write to disk:
 
 | Tool | What it does |
 |---|---|
-| `extract_function(file, start_line, end_line, new_name)` | Pulls a block of JavaScript into a new top-level function, infers the parameter list from the block's free variables, returns a unified diff. |
-| `rename_symbol(old_name, new_name)` | Whole-identifier rename across every `.js`, `.css` and `.html` file; returns affected files with per-file match counts. |
+| `extract_function(file, start_line, end_line, new_name)` | Pulls a block of JavaScript into a new top-level function, works out the parameter list from the variables the block uses but does not define, returns a diff. |
+| `rename_symbol(old_name, new_name)` | Whole-word rename across every `.js`, `.css` and `.html` file; returns the affected files with a count each. |
 
-Advisory on purpose. The agent still has `Edit`, so the arms compare *choice*,
-not capability — and neither arm can corrupt the other's sandbox through the
-MCP path.
+Advisory on purpose. The agent still has `Edit`, so what is being compared is
+*choice*, not capability — and neither run can damage the other's copy through
+the MCP path.
 
-### `probe_cli.py`
+### `compare_tools.py`
 
 ```bash
-python probe_cli.py                  # both arms, compared
-python probe_cli.py --arm detailed   # one arm
-python probe_cli.py --format json    # machine-readable timelines
-python probe_cli.py --show-options   # config + task, no API call
+python compare_tools.py                          # both, compared
+python compare_tools.py --descriptions detailed  # just one
+python compare_tools.py --format json            # machine-readable
+python compare_tools.py --show-options           # settings + job, no API call
 ```
 
-Each arm runs against its own throwaway copy of the source files in a temp
-directory, so the arms cannot contaminate each other and your working tree is
-never modified. `refactor_tools.REPO` is repointed at the sandbox for the
-duration of the arm, so the MCP tools and `Edit` are looking at the same files.
+Each run gets its own throwaway copy of the source files in a temp folder, so
+the two runs cannot affect each other and your real files are never touched.
+`refactor_tools.REPO` points at that copy for the duration of the run, so the
+MCP tools and `Edit` are looking at the same files.
 
 `strict_mcp_config=True` is set: without it a stray project-level MCP config
-could inject extra servers and the two arms would stop being comparable.
+could add servers and the two runs would stop being comparable.
 
-### The task
+### The job
 
 ```
 Two changes to `scripts.js`:
@@ -99,38 +99,39 @@ Show me the resulting change.
 ```
 
 It needs both tools, and both are things `Edit` could also do. That is what
-makes the choice informative rather than forced.
+makes the choice worth watching rather than forced.
 
-The task requires `scripts.js`, which exists only on the `test` branch. The
-probe checks for it and says so rather than failing obscurely.
+The job needs `scripts.js`, which exists only on the `test` branch.
+`compare_tools.py` checks for it and says so rather than failing obscurely.
 
-### The measurement
+### What gets measured
 
-The tool timeline. Did `mcp__refactor__*` appear, or did the agent reach for
-`Edit` and `Grep`?
+Which tools actually got called. Did `mcp__refactor__*` show up, or did the
+agent reach for `Edit` and `Grep`?
 
 ```
-  --- arm: vague ------------------------------------------
-      tool timeline : Read -> Grep -> Edit -> Edit
-      MCP calls     : 0
-      Edit/Write    : 2
+  --- vague descriptions ---------------------------------
+      tools called : Read -> Grep -> Edit -> Edit
+      MCP calls    : 0
+      Edit/Write   : 2
 
-  --- arm: detailed ---------------------------------------
-      tool timeline : Read -> mcp__refactor__extract_function -> mcp__refactor__rename_symbol
-      MCP calls     : 2
-      Edit/Write    : 0
+  --- detailed descriptions ------------------------------
+      tools called : Read -> mcp__refactor__extract_function -> mcp__refactor__rename_symbol
+      MCP calls    : 2
+      Edit/Write   : 0
 ```
 
-(Illustrative. See §5 — this has not been run against a funded key.)
+(Made up, to show the shape. See §5 — this has not been run against a funded
+key.)
 
 ---
 
-## 4. Two bugs the build surfaced
+## 4. Two bugs this surfaced
 
-Both were caught by exercising the implementations directly before wiring them
-to a model, and both would have quietly degraded the probe.
+Both were caught by running the tools directly before wiring a model to them,
+and both would have quietly ruined the comparison.
 
-### Free variables harvested from string literals
+### Parameters picked up out of string literals
 
 The first `extract_function` produced:
 
@@ -138,24 +139,26 @@ The first `extract_function` produced:
 isValidEmail(Check, Please, Thanks, address)
 ```
 
-`Check`, `Please`, `Thanks` and `address` are words from
+`Check`, `Please`, `Thanks` and `address` are words out of
 `'Thanks! Check your inbox to confirm.'` and `'Please enter a valid email
-address.'`. The identifier scan was reading prose inside string literals.
+address.'`. The scan for variable names was reading ordinary English inside
+quoted strings.
 
-Fixed by scrubbing strings, template literals and comments before collecting
-identifiers. Now:
+Fixed by stripping strings, template literals and comments before looking for
+names. Now:
 
 ```
 handleEmail(email, status, subscribe)
 ```
 
-Exactly the three free variables, which is the whole selling point of the tool.
+Exactly the three variables the block uses but does not define, which is the
+whole selling point of the tool.
 
-### No brace-balance check
+### No check that the block closes its own braces
 
 The tool would happily "extract" a half-open block — `} else {` through `});` —
-and emit JavaScript that cannot parse. It now rejects a range whose braces or
-parens do not close within it:
+and hand back JavaScript that cannot run. It now refuses a range whose braces
+or brackets do not close inside it:
 
 ```
 Lines 26-31 of scripts.js cannot be extracted: the block closes a brace it
@@ -163,64 +166,63 @@ never opened. Widen or narrow the range to a complete statement.
 ```
 
 This matters beyond correctness. The detailed description claims *"PREFER THIS
-OVER Edit for extraction"*. A tool that emits broken syntax makes that claim
+OVER Edit for extraction"*. A tool that hands back broken code makes that claim
 false, and an agent that tried it once and got garbage would be right to fall
-back to `Edit` — which would have shown up as a null result and been
-misread as "descriptions don't matter".
+back to `Edit` — which would have shown up as "no difference" and been read as
+"the wording didn't matter".
 
 ---
 
-## 5. Verification status
+## 5. What is and isn't verified
 
-**Confirmed working:**
+**Working:**
 
-- Both tool implementations, exercised directly against the real `scripts.js`.
-  `rename_symbol` correctly reports `scripts.js (4)`, `styles.css (1)`,
-  `index.html (2)` for `status`. `extract_function` correctly infers
-  `(email, status, subscribe)`.
-- Guard paths: non-JS file, out-of-range lines, unbalanced block, no-match
-  rename — all return a clear `is_error` result rather than nonsense.
-- The MCP server registers in a live session:
+- Both tools, run directly against the real `scripts.js`. `rename_symbol`
+  correctly reports `scripts.js (4)`, `styles.css (1)`, `index.html (2)` for
+  `status`. `extract_function` correctly works out `(email, status, subscribe)`.
+- The refusal paths: non-JavaScript file, line numbers out of range, unbalanced
+  block, nothing to rename — each returns a clear error rather than nonsense.
+- The MCP server connects in a live session:
   ```
   mcp_servers: [{'name': 'refactor', 'status': 'connected'}]
   tools: ['Edit', 'Glob', 'Grep', 'Read',
           'mcp__refactor__extract_function', 'mcp__refactor__rename_symbol']
   ```
-- `--show-options` reports 30 chars vs 1267 chars for the two arms — the
-  independent variable is real and measurable.
+- `--show-options` reports 30 characters against 1267 for the two runs — the
+  thing being varied is real and measurable.
 
-**Not yet proven:**
+**Not working yet:**
 
-The probe has never completed a run. The available API key returns
-`billing_error: Credit balance is too low`, same blocker as the review flow
-(`PLAN.md` §5). Everything up to the model call is verified; the tool timeline
-itself is not.
+The comparison has never finished a run. The available API key returns
+`billing_error: Credit balance is too low`, the same blocker as the review flow
+(`PLAN.md` §5). Everything up to the model call is verified; which tools get
+called is not.
 
 To finish:
 
 ```bash
 git checkout test
-python probe_cli.py
+python compare_tools.py
 ```
 
 ---
 
 ## 6. Reading the result honestly
 
-One run is an anecdote. `probe_cli.py` prints that line every time, and it is
-not decoration:
+One run is a story, not evidence. `compare_tools.py` prints that line every
+time, and it is not decoration:
 
-- The model may call the MCP tools in **both** arms — the tool *names* alone
-  are fairly suggestive here. That is a real outcome, not a failed probe, and
-  the honest reading is "the name carried it; the description was not the
-  binding constraint for this task".
-- The model may call them in **neither** arm. Check the tools are reachable
-  before concluding anything — a disconnected server looks identical to a
-  rejected one from the timeline.
-- The vague arm may occasionally use them and the detailed arm not. Re-run.
+- The model may use the MCP tools in **both** runs — the tool *names* are
+  fairly suggestive on their own here. That is a real outcome, and the honest
+  reading is "the name carried it; the wording wasn't what decided it".
+- The model may use them in **neither** run. Check the tools are reachable
+  before concluding anything — a server that failed to connect looks exactly
+  like one the agent ignored.
+- The vague run may occasionally use them and the detailed run not. Run it
+  again.
 
-The probe reports which of these happened rather than asserting the expected
-result, which is the only way it can be evidence rather than a demo.
+The output names which of these happened rather than announcing the expected
+answer. That is the only way it counts as evidence instead of a magic trick.
 
 ---
 
@@ -233,7 +235,7 @@ It now covers both halves:
 |---|---|---|
 | Built-in tools, read-only gating | ✅ | ✅ |
 | Custom MCP server | ❌ | ✅ `refactor_tools.py` |
-| Tool descriptions drive selection | ❌ | ✅ `probe_cli.py` |
+| Wording of descriptions vs tool choice | ❌ | ✅ `compare_tools.py` |
 | `strict_mcp_config` | ❌ | ✅ |
 
 D1, D3, D4 and D5 are unaffected. The PR flow did not change — no commit in
@@ -242,16 +244,17 @@ workflow.
 
 ---
 
-## 8. Demo script
+## 8. How to demo it
 
-1. **Show the two descriptions.** `python probe_cli.py --show-options`.
-   30 characters against 1267. Same schema, same implementation, same name.
-2. **Run both arms.** `python probe_cli.py`.
-3. **Read the timelines**, not the prose. The vague arm's fallback to
-   `Grep` + `Edit` is the interesting part: it is what a manual rename looks
-   like, and `Grep` matches substrings, so `nav` also hits `nav-toggle` and
-   `site-nav`.
-4. **Show why the tool is better**, not just preferred: ask for an unbalanced
-   range and watch it refuse, then note that `Edit` would have accepted it.
-5. **Say the limit out loud.** One sample per arm. This is a demonstration of
-   the mechanism, not a measurement of the effect size.
+1. **Show the two descriptions.** `python compare_tools.py --show-options`.
+   30 characters against 1267. Same inputs, same code behind them, same name.
+2. **Run both.** `python compare_tools.py`.
+3. **Read which tools got called**, not the prose. The vague run falling back
+   to `Grep` + `Edit` is the interesting part: that is what a manual rename
+   looks like, and `Grep` matches parts of words, so renaming `nav` also hits
+   `nav-toggle` and `site-nav`.
+4. **Show that the tool is genuinely better**, not just preferred: ask for an
+   unbalanced range and watch it refuse, then point out that `Edit` would have
+   accepted it.
+5. **Say the limit out loud.** One run each. This shows the mechanism; it does
+   not measure how big the effect is.

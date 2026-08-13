@@ -40,14 +40,14 @@ PR-Scenario/
 ├─ scripts.js                        (test branch only)
 ├─ CLAUDE.md                         review standards: REPORT / SKIP / scope / severity
 ├─ PLAN.md                           this file
-├─ MCP_PLAN.md                       the D2 tool-description probe
+├─ MCP_PLAN.md                       comparing MCP tool descriptions
 ├─ README.md                         how to run it
 ├─ requirements.txt
 ├─ .env                              fake credentials — committed on purpose
 ├─ .gitignore
 ├─ review_cli.py                     the reviewer; one file, two modes
-├─ refactor_tools.py                 in-process MCP server (probe only)
-├─ probe_cli.py                      the D2 A/B probe (not part of the PR flow)
+├─ refactor_tools.py                 in-process MCP server (comparison only)
+├─ compare_tools.py                  the description comparison (not in the PR flow)
 ├─ .claude/
 │  └─ settings.json                  permissions.deny — the secret exclusion
 └─ .github/
@@ -274,8 +274,8 @@ What to say out loud when demoing this, per domain.
 - **The tool set is the boundary.** Read-only in both modes. The agent reports;
   it cannot fix.
 - **Tool descriptions drive selection.** A custom MCP server with two
-  description sets — 30 characters against 1267, everything else identical.
-  Separate entry point (`probe_cli.py`); the PR flow does not use it. Full
+  sets of descriptions — 30 characters against 1267, everything else
+  identical. Separate entry point (`compare_tools.py`); the PR flow does not use it. Full
   design, bugs and caveats in `MCP_PLAN.md`.
 
 ### D4 — Prompt Engineering & Structured Output (~1–2 questions)
@@ -310,10 +310,11 @@ coverage the repo does not have.
 ### ~~MCP refactor server~~ — now built, see `MCP_PLAN.md`
 
 An in-process MCP server (`refactor_tools.py`) with `extract_function` and
-`rename_symbol`, plus the vague-vs-detailed description probe
-(`probe_cli.py`). It is a **separate entry point**, not part of the PR flow:
-the reviewer is read-only and would never call a refactor tool, so both arms
-would record zero calls and the probe could not fail. `MCP_PLAN.md` has the
+`rename_symbol`, plus the vague-vs-detailed description comparison
+(`compare_tools.py`). It is a **separate entry point**, not part of the PR
+flow: the reviewer is read-only and would never call a refactor tool, so both
+runs would record zero calls and the comparison could not come out either way.
+`MCP_PLAN.md` has the
 design, the two bugs it surfaced, and its own verification status.
 
 Nothing in the PR flow changed to accommodate it.
@@ -337,17 +338,17 @@ would be the *other* half of D5 rather than support for this half.
 No separate demo script and no guided walkthrough. `--mode local` is a real
 configuration, but there is no class-demo flow beyond running the CLI by hand.
 
-### Extended thinking and multi-aspect review probes
+### Extended thinking and split-up review prompts
 
 No experiments comparing zero-shot vs chain-of-thought vs extended-thinking
 prompts, and none splitting a single multi-aspect review into separate
 security and business-logic passes. Discussed in the wider Scenario 2 notes;
-not realized as probes here.
+not built here.
 
 ### Plan mode vs direct execution
 
 No paired tasks showing a simple fix by direct execution against a complex
-refactor via plan mode. Narratable, but there is no probe in this repo.
+refactor via plan mode. Explainable in words, but nothing in this repo shows it.
 
 ### A test suite for the site
 
@@ -364,7 +365,7 @@ Section 6 says what each domain *is* covered by. This is the other side of it.
 |---|---|---|
 | **D3** Config & Workflows | `CLAUDE.md`, `setting_sources`, injected standards, `permissions.deny`, lean CI config, tool gating | skills and commands as working artifacts |
 | **D5** Context & Reliability | fresh session per PR, repeatable configuration | scratchpad handoff (conceptual only) |
-| **D2** Tool Design | built-in tools, read-only gating, MCP server, tool-description probe (`MCP_PLAN.md`) | — |
+| **D2** Tool Design | built-in tools, read-only gating, MCP server, description comparison (`MCP_PLAN.md`) | — |
 | **D4** Prompt Engineering | REPORT / SKIP, scoped verification, structured JSON | extended thinking, multi-aspect prompt splitting |
 | **D1** Agentic Architecture | autonomous CI review | conversational-vs-autonomous beyond the local/CI modes |
 

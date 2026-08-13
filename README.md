@@ -20,12 +20,12 @@ test  --(PR)-->  main
 |---|---|
 | `index.html`, `styles.css` | the landing page |
 | `PLAN.md` | the build record: design, deviations, what is and isn't verified |
-| `MCP_PLAN.md` | the D2 tool-description probe — separate from the PR flow |
+| `MCP_PLAN.md` | comparing MCP tool descriptions — separate from the PR flow |
 | `CLAUDE.md` | the review standards: REPORT / SKIP / scope / severity |
 | `.claude/settings.json` | `permissions.deny` — the secret exclusion |
 | `.env` | fake credentials, committed on purpose as the deny-rule fixture |
 | `review_cli.py` | the reviewer; one file, two modes |
-| `refactor_tools.py`, `probe_cli.py` | the MCP probe. Not used by the PR flow |
+| `refactor_tools.py`, `compare_tools.py` | the MCP comparison. Not used by the PR flow |
 | `.github/workflows/ai-feature-review.yml` | the PR job and the merge gate |
 
 ## Branches

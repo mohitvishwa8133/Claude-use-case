@@ -1,16 +1,16 @@
-"""In-process MCP refactor server — the D2 "tool descriptions" probe.
+"""In-process MCP refactor server — used by `compare_tools.py`.
 
-Two description sets, one implementation. The ONLY difference between the arms
-is the prose in the `@tool` description, which is exactly the claim under test:
-tool descriptions drive tool selection.
+Two sets of descriptions, one implementation. The only difference between the
+two runs is the wording in the `@tool` description, which is exactly the
+question being asked: does that wording change which tool the agent picks?
 
 Runs in-process via create_sdk_mcp_server(), so there is no second process to
-manage and the description set is a Python variable swapped per arm.
+manage and the set of descriptions is just a Python variable.
 
-Both tools are ADVISORY: they compute the change and return it as a diff, and
-never write to disk. The agent still has `Edit` available in the probe — that
-is the point. If it reaches for `Edit` instead of these, the descriptions did
-not do their job.
+Both tools are ADVISORY: they work out the change, return it as a diff, and
+never write to disk. The agent still has `Edit` available — that is the point.
+If it reaches for `Edit` instead of these, the descriptions did not do their
+job.
 """
 
 from __future__ import annotations
@@ -262,7 +262,7 @@ DESCRIPTION_SETS = {"vague": DESCRIPTIONS_VAGUE, "detailed": DESCRIPTIONS_DETAIL
 
 
 def build_refactor_server(description_set: str = "detailed"):
-    """Build the in-process MCP server with the requested description set.
+    """Build the in-process MCP server with the requested descriptions.
 
     `description_set` is "vague" or "detailed". Everything else — schemas,
     implementations, tool names — is identical between the two.
