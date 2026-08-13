@@ -180,10 +180,10 @@ The detailed description promises:
 > PREFER THIS OVER Grep-then-Edit: a manual sweep matches substrings, so
 > renaming `nav` also corrupts `nav-toggle` and `site-nav`. This does not.
 
-It did. `nav` matches inside `nav-toggle`, because a hyphen counts as a
-word boundary — so the tool had exactly the flaw it was selling itself as the
-cure for. CSS class names are full of hyphens, which is the case the
-description leads with.
+It did. The old pattern was `\bnav\b`, which matches inside `nav-toggle`,
+because a hyphen counts as a word boundary — so the tool had exactly the flaw
+it was selling itself as the cure for. CSS class names are full of hyphens,
+which is the case the description leads with.
 
 Fixed by treating `-` as part of a name: `(?<![\w-])name(?![\w-])`. The
 difference is visible in the counts — renaming `status` used to report 4 hits
@@ -204,7 +204,8 @@ the comparison as "the wording didn't matter".
 - Both tools, run directly against the real `site/scripts.js`. `rename_symbol`
   correctly reports `site/scripts.js (3)`, `site/styles.css (1)`,
   `site/index.html (1)` for `status`, and correctly skips `site-nav` and
-  `nav-toggle` when renaming `nav`. `extract_function` correctly works out `(email, status, subscribe)`.
+  `nav-toggle` when renaming `nav`. `extract_function` correctly works out
+  `(email, status, subscribe)`.
 - The refusal paths: non-JavaScript file, line numbers out of range, unbalanced
   block, a path outside `site/`, nothing to rename — each returns a clear error
   rather than nonsense.
