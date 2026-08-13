@@ -104,6 +104,17 @@ _ASSIGNED_RE = re.compile(r"^\s*([A-Za-z_$][\w$]*)\s*=[^=]", re.MULTILINE)
 _IDENT_RE = re.compile(r"\b([A-Za-z_$][\w$]*)\b")
 # Property accesses and object keys are not free variables: `a.b` and `{b: 1}`.
 _MEMBER_RE = re.compile(r"\.\s*[A-Za-z_$][\w$]*|\b[A-Za-z_$][\w$]*\s*:")
+# Strings and comments contain prose, not identifiers. Scrubbing them is not
+# cosmetic: 'Please enter a valid email address.' otherwise contributes
+# `Please`, `enter`, `valid`, `email` and `address` to the parameter list.
+_NOISE_RE = re.compile(
+    r"'(?:\\.|[^'\\])*'"      # single-quoted
+    r'|"(?:\\.|[^"\\])*"'     # double-quoted
+    r"|`(?:\\.|[^`\\])*`"     # template literal
+    r"|//[^\n]*"              # line comment
+    r"|/\*.*?\*/",            # block comment
+    re.DOTALL,
+)
 
 
 def _ok(text: str) -> dict[str, Any]:
@@ -123,7 +134,7 @@ def _resolve(rel: str) -> Path:
 
 
 def _free_variables(block: list[str]) -> list[str]:
-    body = "\n".join(block)
+    body = _NOISE_RE.sub(" ", "\n".join(block))
     declared = set(_DECLARED_RE.findall(body)) | set(_ASSIGNED_RE.findall(body))
     scrubbed = _MEMBER_RE.sub(" ", body)
     referenced = set(_IDENT_RE.findall(scrubbed))
@@ -132,6 +143,25 @@ def _free_variables(block: list[str]) -> list[str]:
         for name in referenced - declared - _JS_GLOBALS
         if len(name) > 1 and not name[0].isdigit()
     )[:4]
+
+
+def _unbalanced(block: list[str]) -> str | None:
+    """Reject a block whose braces or parens do not close within it.
+
+    This is the concrete reason to prefer this tool over a hand-written `Edit`:
+    a half-open block is the failure a manual line-range extraction makes most
+    often, and it produces JavaScript that will not parse.
+    """
+    text = _NOISE_RE.sub(" ", "\n".join(block))
+    for opener, closer, label in (("{", "}", "braces"), ("(", ")", "parens")):
+        depth = 0
+        for char in text:
+            depth += (char == opener) - (char == closer)
+            if depth < 0:
+                return f"closes a {label[:-1]} it never opened"
+        if depth > 0:
+            return f"leaves {depth} unclosed {label}"
+    return None
 
 
 def _extract_function_impl(args: dict[str, Any]) -> dict[str, Any]:
@@ -153,6 +183,13 @@ def _extract_function_impl(args: dict[str, Any]) -> dict[str, Any]:
         return _err(f"Line range {start}-{end} is outside {rel} (1-{len(lines)}).")
 
     block = lines[start - 1 : end]
+    problem = _unbalanced(block)
+    if problem:
+        return _err(
+            f"Lines {start}-{end} of {rel} cannot be extracted: the block {problem}. "
+            "Widen or narrow the range to a complete statement."
+        )
+
     indent = min((len(l) - len(l.lstrip()) for l in block if l.strip()), default=0)
     dedented = [l[indent:] if len(l) >= indent else l for l in block]
 

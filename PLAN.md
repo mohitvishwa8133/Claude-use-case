@@ -40,11 +40,14 @@ PR-Scenario/
 ├─ scripts.js                        (test branch only)
 ├─ CLAUDE.md                         review standards: REPORT / SKIP / scope / severity
 ├─ PLAN.md                           this file
+├─ MCP_PLAN.md                       the D2 tool-description probe
 ├─ README.md                         how to run it
 ├─ requirements.txt
 ├─ .env                              fake credentials — committed on purpose
 ├─ .gitignore
 ├─ review_cli.py                     the reviewer; one file, two modes
+├─ refactor_tools.py                 in-process MCP server (probe only)
+├─ probe_cli.py                      the D2 A/B probe (not part of the PR flow)
 ├─ .claude/
 │  └─ settings.json                  permissions.deny — the secret exclusion
 └─ .github/
@@ -270,6 +273,10 @@ What to say out loud when demoing this, per domain.
   individually gateable.
 - **The tool set is the boundary.** Read-only in both modes. The agent reports;
   it cannot fix.
+- **Tool descriptions drive selection.** A custom MCP server with two
+  description sets — 30 characters against 1267, everything else identical.
+  Separate entry point (`probe_cli.py`); the PR flow does not use it. Full
+  design, bugs and caveats in `MCP_PLAN.md`.
 
 ### D4 — Prompt Engineering & Structured Output (~1–2 questions)
 
@@ -300,12 +307,16 @@ here**. Some are covered in narration; some are simply absent. Listed so the
 omissions read as choices rather than gaps — and so nobody demoing this claims
 coverage the repo does not have.
 
-### MCP refactor server
+### ~~MCP refactor server~~ — now built, see `MCP_PLAN.md`
 
-No custom MCP server, no `extract_function` / `rename_symbol`, and no
-vague-vs-detailed tool-description experiment. The tool story stops at built-in
-tools and their gating. Out of scope for a read-only reviewer that never
-refactors anything.
+An in-process MCP server (`refactor_tools.py`) with `extract_function` and
+`rename_symbol`, plus the vague-vs-detailed description probe
+(`probe_cli.py`). It is a **separate entry point**, not part of the PR flow:
+the reviewer is read-only and would never call a refactor tool, so both arms
+would record zero calls and the probe could not fail. `MCP_PLAN.md` has the
+design, the two bugs it surfaced, and its own verification status.
+
+Nothing in the PR flow changed to accommodate it.
 
 ### Skills vs commands
 
@@ -353,7 +364,7 @@ Section 6 says what each domain *is* covered by. This is the other side of it.
 |---|---|---|
 | **D3** Config & Workflows | `CLAUDE.md`, `setting_sources`, injected standards, `permissions.deny`, lean CI config, tool gating | skills and commands as working artifacts |
 | **D5** Context & Reliability | fresh session per PR, repeatable configuration | scratchpad handoff (conceptual only) |
-| **D2** Tool Design | built-in tools, read-only gating | MCP servers, tool-description quality |
+| **D2** Tool Design | built-in tools, read-only gating, MCP server, tool-description probe (`MCP_PLAN.md`) | — |
 | **D4** Prompt Engineering | REPORT / SKIP, scoped verification, structured JSON | extended thinking, multi-aspect prompt splitting |
 | **D1** Agentic Architecture | autonomous CI review | conversational-vs-autonomous beyond the local/CI modes |
 
