@@ -29,6 +29,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # The Python SDK does not bundle the agent it drives: it locates a
+      # `claude` binary on PATH via shutil.which() and spawns it. pip alone
+      # leaves the runner without one, and the review dies at spawn with a
+      # reviewer failure (exit 2) that looks nothing like its real cause.
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Verify the CLI is on PATH
+        run: claude --version
+
       # Every PR gets a FRESH session (D5). Nothing carries over from the run
       # that reviewed the previous commit, so there is no prior reasoning to be
       # anchored by — the reviewer re-reads the code from scratch each time.
