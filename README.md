@@ -19,6 +19,7 @@ test  --(PR)-->  main
 | Path | What it is |
 |---|---|
 | `index.html`, `styles.css` | the landing page |
+| `PLAN.md` | the build record: design, deviations, what is and isn't verified |
 | `CLAUDE.md` | the review standards: REPORT / SKIP / scope / severity |
 | `.claude/settings.json` | `permissions.deny` — the secret exclusion |
 | `.env` | fake credentials, committed on purpose as the deny-rule fixture |
