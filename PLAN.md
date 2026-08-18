@@ -110,9 +110,14 @@ with `category` and `severity` constrained to enums. The workflow reads
 
 ### The merge gate
 
-A finding blocks only if **both** halves hold: `category ∈ {security, logic}`
-**and** `severity ∈ {high, critical}`. A `ux` issue at `critical` is loud and
-belongs in the comment, but it is not by itself a reason to refuse a merge.
+A finding blocks only if **both** halves hold:
+`category ∈ {security, logic, typo}` **and** `severity ∈ {high, critical}`.
+A `ux` issue at `critical` is loud and belongs in the comment, but it is not by
+itself a reason to refuse a merge.
+
+`typo` was added late, and the reasoning is in §4.4. There are two gates now:
+`node --check` parses the script before anything else runs, and the `typo`
+category covers what a parser cannot see.
 
 | Exit | Meaning | Merge |
 |---|---|---|
@@ -132,7 +137,7 @@ disagree.
 
 ## 4. Deviations from the original plan
 
-Three things changed during the build. Each is a correction, not a shortcut.
+Four things changed during the build. Each is a correction, not a shortcut.
 
 ### 4.1 The deny rules load by path, not by discovery
 
@@ -172,6 +177,51 @@ it the answer key makes every subsequent finding unfalsifiable.
 The defect list is kept outside the repository. This file describes the
 *categories* the `test` branch exercises — security, logic, reliability, and
 several UX and accessibility gaps — and nothing more specific.
+
+### 4.4 Typos are two problems, not one, and get two gates
+
+The first three demo runs never mentioned a typo, for two separate reasons:
+`CLAUDE.md` never asked for one, and even a `reliability`/`critical` finding
+does not satisfy the blocking rule. Run 3 proved the second half — a `critical`
+finding sat in the comment while the merge stayed unlocked.
+
+The obvious fix is a linter, and for part of the problem it is the right one.
+But "typo" turns out to name three different defects, and no single tool covers
+them:
+
+| | Example | `node --check` | Model |
+|---|---|---|---|
+| Syntax broken | `functoin f() {}`, unclosed brace | ✅ | ✅ |
+| Name does not resolve | `documnet.getElementById` | ❌ valid JS | ✅ |
+| Wrong member on a real object | `document.getElementByID` | ❌ valid JS | ✅ |
+| `id` in JS absent from the markup | `getElementById('welcome-bannner')` | ❌ single-file | ✅ |
+
+Rows 2–4 all parse cleanly. Row 4 is not even a single-file question: it is
+`site/scripts.js` disagreeing with `site/index.html`, which is why the reviewer
+reads whole files rather than a diff.
+
+So both gates exist:
+
+- **`node --check site/scripts.js`**, first in the workflow. Free, instant,
+  identical on every run. It is `continue-on-error: true` — not because a
+  parse failure is forgivable, but so the review still runs on the same file
+  and the final step can enforce both. Deferred, not forgiven.
+- **A `typo` category** in `FINDINGS_SCHEMA`, in `BLOCKING_CATEGORIES`, and
+  defined in `CLAUDE.md` with its own severity table.
+
+The severity table is the part that does the work. Without it the model grades
+inconsistently and the gate becomes a coin flip; with it a misspelt global is
+`critical`, a dropped CSS property is `high`, and a misspelt word in visible
+copy is `low` and correctly blocks nothing.
+
+`CLAUDE.md`'s SKIP list also gained a boundary, or the new category would eat
+it: `btn`, `nav`, `el` are abbreviations. A name is a `typo` only when
+something else — the markup, another file, or the language — expects a
+different spelling of it.
+
+**Honest limit:** the parser gives the same answer every time; the model does
+not. Row 1 is guaranteed. Rows 2–4 are very likely and not certain. Anything
+that must never slip through belongs in the parser column.
 
 ---
 
